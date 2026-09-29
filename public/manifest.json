@@ -1,0 +1,21 @@
+{
+  "name": "Zalo Nail & Spa",
+  "short_name": "Spa Booking",
+  "description": "Ứng dụng đặt lịch làm đẹp và chăm sóc móng",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#9333ea",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/1940/1940989.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/1940/1940989.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
