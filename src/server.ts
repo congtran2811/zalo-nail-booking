@@ -17,6 +17,8 @@ import { getServices, createService, updateService, deleteService } from './cont
 import { getBookings, updateBookingStatus, createManualBooking } from './controllers/admin/booking.controller.js';
 import { getBlockedSlots, createBlockedSlot, deleteBlockedSlot } from './controllers/admin/blocked.controller.js';
 import { getBusinessHours, updateBusinessHours } from './controllers/admin/business-hours.controller.js';
+import { getGoogleConfigs, createGoogleConfig, updateGoogleConfig, activateGoogleConfig, deleteGoogleConfig, getGoogleAuthUrl, googleAuthCallback } from './controllers/admin/google.controller.js';
+
 
 dotenv.config();
 
@@ -223,6 +225,17 @@ app.put('/api/admin/business-hours', adminAuthMiddleware, updateBusinessHours);
 app.get('/api/admin/blocked-slots', adminAuthMiddleware, getBlockedSlots);
 app.post('/api/admin/blocked-slots', adminAuthMiddleware, createBlockedSlot);
 app.delete('/api/admin/blocked-slots/:id', adminAuthMiddleware, deleteBlockedSlot);
+
+// Google Calendar Configs
+app.get('/api/admin/google-configs', adminAuthMiddleware, getGoogleConfigs);
+app.post('/api/admin/google-configs', adminAuthMiddleware, createGoogleConfig);
+app.put('/api/admin/google-configs/:id', adminAuthMiddleware, updateGoogleConfig);
+app.patch('/api/admin/google-configs/:id/activate', adminAuthMiddleware, activateGoogleConfig);
+app.delete('/api/admin/google-configs/:id', adminAuthMiddleware, deleteGoogleConfig);
+
+// Google OAuth
+app.get('/api/admin/google-auth/url', adminAuthMiddleware, getGoogleAuthUrl);
+app.get('/api/admin/google-auth/callback', googleAuthCallback);
 
 // ─── Start Server ─────────────────────────────────────────────────────────────
 

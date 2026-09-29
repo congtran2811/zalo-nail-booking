@@ -24,6 +24,29 @@
 
   <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
 
+    <!-- Google Calendar Config Section -->
+    <section>
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-bold text-gray-900">Cấu hình Google Calendar</h2>
+        <button onclick="openGoogleModal()" class="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-blue-700">
+          + Thêm Tài khoản
+        </button>
+      </div>
+      <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Gmail Address</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Trạng thái</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ngày thêm</th>
+              <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody id="google-tbody" class="bg-white divide-y divide-gray-200"></tbody>
+        </table>
+      </div>
+    </section>
+
     <!-- Business Hours Section -->
     <section>
       <div class="flex justify-between items-center mb-4">
@@ -88,6 +111,8 @@
   </main>
 
   <!-- Modals (Hidden by default) -->
+
+
   <div id="service-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex justify-center items-center z-50">
     <div class="bg-white rounded-xl p-6 w-full max-w-md shadow-2xl">
       <div class="flex justify-between items-center mb-4">
@@ -159,6 +184,56 @@
       if (res.status === 401 || res.status === 403) window.location.href = '/admin/login';
       return res.json();
     };
+
+    // --- Google Configs Logic ---
+    let googleConfigsCache = [];
+
+    async function loadGoogleConfigs() {
+      const res = await fetchApi('/api/admin/google-configs');
+      if (res.success) {
+        googleConfigsCache = res.data;
+        const tbody = document.getElementById('google-tbody');
+        tbody.innerHTML = res.data.map(g => `
+          <tr>
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${g.gmail_address}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm">
+              ${g.is_active 
+                ? '<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Đang hoạt động</span>' 
+                : '<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">Ngừng</span>'}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${new Date(g.created_at).toLocaleDateString('vi-VN')}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+              ${!g.is_active ? `<button onclick="activateGoogleConfig('${g.id}')" class="text-green-600 hover:text-green-900 mr-3">Kích hoạt</button>` : ''}
+              <button onclick="deleteGoogleConfig('${g.id}')" class="text-red-600 hover:text-red-900">Xóa</button>
+            </td>
+          </tr>
+        `).join('');
+      }
+    }
+
+    async function openGoogleModal() {
+      // Trigger OAuth2 Redirect
+      const res = await fetchApi('/api/admin/google-auth/url');
+      if (res.success) {
+        window.location.href = res.url;
+      } else {
+        alert('Lỗi: ' + res.message);
+      }
+    }
+
+    async function activateGoogleConfig(id) {
+      if (!confirm('Kích hoạt tài khoản này làm lịch đặt hẹn chính?')) return;
+      const res = await fetchApi(`/api/admin/google-configs/${id}/activate`, { method: 'PATCH' });
+      if (res.success) loadGoogleConfigs();
+      else alert(res.message);
+    }
+
+    async function deleteGoogleConfig(id) {
+      if (!confirm('Xóa cấu hình này?')) return;
+      const res = await fetchApi(`/api/admin/google-configs/${id}`, { method: 'DELETE' });
+      if (res.success) loadGoogleConfigs();
+      else alert(res.message);
+    }
 
     // --- Business Hours Logic ---
     const dayNames = ['Chủ Nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
@@ -324,6 +399,7 @@
     loadServices();
     loadBlocked();
     loadBusinessHours();
+    loadGoogleConfigs();
   </script>
 </body>
 </html>
