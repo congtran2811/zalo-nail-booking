@@ -1,5 +1,5 @@
-import { calendar } from '../config/google.js';
-import type { calendar_v3 } from 'googleapis';
+import { google, calendar_v3 } from 'googleapis';
+import { pool } from '../config/database.js';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -21,7 +21,6 @@ export interface CalendarSyncResult {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-const CALENDAR_ID = process.env.GOOGLE_CALENDAR_ID || 'primary';
 const TIMEZONE = 'Asia/Ho_Chi_Minh';
 const MAX_RETRY_ATTEMPTS = 3;
 const RETRY_DELAY_MS = 1000;
@@ -29,6 +28,25 @@ const RETRY_DELAY_MS = 1000;
 /** Exponential back-off sleep */
 function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/** Get dynamic google calendar client */
+async function getActiveCalendarClient() {
+  const { rows } = await pool.query('SELECT * FROM google_calendar_configs WHERE is_active = true LIMIT 1');
+  if (rows.length === 0) {
+    throw new Error('No active Google Calendar configuration found in database.');
+  }
+
+  const config = rows[0];
+  const oauth2Client = new google.auth.OAuth2(
+    config.client_id,
+    config.client_secret,
+    process.env.GOOGLE_REDIRECT_URI || 'https://developers.google.com/oauthplayground'
+  );
+
+  oauth2Client.setCredentials({ refresh_token: config.refresh_token });
+
+  return google.calendar({ version: 'v3', auth: oauth2Client });
 }
 
 /** Build a rich, structured Calendar event body */
@@ -96,8 +114,9 @@ export class CalendarService {
 
     for (let attempt = 1; attempt <= MAX_RETRY_ATTEMPTS; attempt++) {
       try {
+        const calendar = await getActiveCalendarClient();
         const response = await calendar.events.insert({
-          calendarId: CALENDAR_ID,
+          calendarId: 'primary',
           requestBody: eventBody,
           sendUpdates: 'none' // don't spam guests
         });
@@ -147,8 +166,9 @@ export class CalendarService {
     booking: CalendarBookingInput
   ): Promise<CalendarSyncResult> {
     try {
+      const calendar = await getActiveCalendarClient();
       const response = await calendar.events.update({
-        calendarId: CALENDAR_ID,
+        calendarId: 'primary',
         eventId: googleEventId,
         requestBody: buildEventBody(booking),
         sendUpdates: 'none'
@@ -175,8 +195,9 @@ export class CalendarService {
    */
   static async deleteEvent(googleEventId: string): Promise<boolean> {
     try {
+      const calendar = await getActiveCalendarClient();
       await calendar.events.delete({
-        calendarId: CALENDAR_ID,
+        calendarId: 'primary',
         eventId: googleEventId,
         sendUpdates: 'none'
       });
@@ -194,8 +215,9 @@ export class CalendarService {
    */
   static async getEvent(googleEventId: string): Promise<calendar_v3.Schema$Event | null> {
     try {
+      const calendar = await getActiveCalendarClient();
       const response = await calendar.events.get({
-        calendarId: CALENDAR_ID,
+        calendarId: 'primary',
         eventId: googleEventId
       });
       return response.data;

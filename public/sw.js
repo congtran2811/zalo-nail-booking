@@ -1,4 +1,4 @@
-const CACHE_NAME = 'spa-booking-v1';
+const CACHE_NAME = 'spa-booking-v2';
 const urlsToCache = [
   '/',
   '/index.html',

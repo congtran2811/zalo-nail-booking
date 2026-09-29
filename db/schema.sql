@@ -63,3 +63,15 @@ CREATE TABLE IF NOT EXISTS blocked_slots (
 -- Index for checking blocked overlapping times
 CREATE INDEX IF NOT EXISTS idx_blocked_slots_time_range ON blocked_slots (start_time, end_time);
 
+-- Table: Google Calendar Configs
+CREATE TABLE IF NOT EXISTS google_calendar_configs (
+    id SERIAL PRIMARY KEY,
+    gmail_address VARCHAR(255) NOT NULL,
+    client_id VARCHAR(255) NOT NULL,
+    client_secret VARCHAR(255) NOT NULL,
+    refresh_token VARCHAR(500) NOT NULL,
+    is_active BOOLEAN DEFAULT false,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+
