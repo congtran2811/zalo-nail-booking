@@ -2,11 +2,12 @@
   "name": "zalo-nail-booking",
   "version": "1.0.0",
   "description": "Real-time nail & spa booking system with Redis concurrency locks and Google Calendar integration",
+  "type": "module",
   "main": "dist/server.js",
   "scripts": {
     "build": "tsc",
     "start": "node dist/server.js",
-    "dev": "ts-node-dev --respawn --transpile-only src/server.ts"
+    "dev": "tsx watch src/server.ts"
   },
   "dependencies": {
     "dotenv": "^16.4.5",
@@ -21,6 +22,7 @@
     "@types/node": "^20.12.12",
     "@types/pg": "^8.11.6",
     "ts-node-dev": "^2.0.0",
+    "tsx": "^4.23.15",
     "typescript": "^5.4.5"
   }
 }
