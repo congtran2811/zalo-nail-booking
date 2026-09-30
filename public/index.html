@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Đặt Lịch Nail & Spa</title>
+  <meta name="description" content="Đặt lịch làm nail và spa trực tuyến — xem khung giờ trống theo thời gian thực." />
+  
+  <!-- PWA Meta Tags -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#9333ea">
+  <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/1940/1940989.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Spa Booking">
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="/socket.io/socket.io.js"></script>
+
+  <style>
+    /* ── Design Tokens ─────────────────────────────────────────────────── */
+    :root {
+      --bg:           #0f0c1a;
+      --bg2:          #16112b;
+      --surface:      rgba(255,255,255,0.05);
+      --surface-hover:rgba(255,255,255,0.09);
+      --border:       rgba(255,255,255,0.08);
+      --gold:         #c9956a;
+      --gold-light:   #e8b98a;
+      --purple:       #7c3aed;
+      --purple-light: #a855f7;
+      --green:        #10b981;
+      --green-glow:   rgba(16,185,129,0.25);
+      --amber:        #f59e0b;
+      --amber-glow:   rgba(245,158,11,0.20);
+      --red:          #ef4444;
+      --text:         #e2d9f3;
+      --text-muted:   #9580b8;
+      --radius:       14px;
+      --transition:   0.22s cubic-bezier(0.4,0,0.2,1);
+    }
+
+    /* ── Reset ─────────────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Be Vietnam Pro', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      background-image:
+        radial-gradient(ellipse 80% 50% at 20% -10%, rgba(124,58,237,0.18) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 80% 110%, rgba(201,149,106,0.12) 0%, transparent 60%);
+    }
+
+    /* ── Layout ────────────────────────────────────────────────────────── */
+    .container {
+      max-width: 680px;
+      margin: 0 auto;
+      padding: 0 16px 80px;
+    }
+
+    /* ── Header ────────────────────────────────────────────────────────── */
+    header {
+      text-align: center;
+      padding: 40px 0 28px;
+    }
+    .logo {
+      font-size: 28px;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--gold-light), var(--purple-light));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: -0.5px;
+    }
+    .logo span { font-weight: 300; }
+    header p {
+      margin-top: 6px;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    /* ── Connection status ─────────────────────────────────────────────── */
+    #connection-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      padding: 4px 12px;
+      border-radius: 100px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      margin-top: 12px;
+      transition: var(--transition);
+    }
+    #connection-badge .dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--amber);
+      animation: pulse 1.4s infinite;
+    }
+    #connection-badge.connected .dot { background: var(--green); animation: none; }
+    #connection-badge.disconnected .dot { background: var(--red); animation: none; }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; } 50% { opacity: 0.35; }
+    }
+
+    /* ── Section ───────────────────────────────────────────────────────── */
+    section { margin-bottom: 28px; }
+    .section-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+
+    /* ── Glass card ────────────────────────────────────────────────────── */
+    .glass {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      backdrop-filter: blur(12px);
+    }
+
+    /* ── Service Cards ─────────────────────────────────────────────────── */
+    .services-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+    .service-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      padding: 16px 10px;
+      border-radius: var(--radius);
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      cursor: pointer;
+      transition: var(--transition);
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .service-card::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(135deg, rgba(124,58,237,0.1), transparent);
+      opacity: 0;
+      transition: var(--transition);
+    }
+    .service-card:hover { border-color: rgba(124,58,237,0.4); }
+    .service-card:hover::before { opacity: 1; }
+    .service-card.selected {
+      border-color: var(--gold);
+      background: rgba(201,149,106,0.08);
+      box-shadow: 0 0 20px rgba(201,149,106,0.15);
+    }
+    .service-card.selected::before { opacity: 1; }
+    .service-icon { font-size: 26px; line-height: 1; }
+    .service-name {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.3;
+    }
+    .service-meta {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+    .service-price {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--gold);
+    }
+
+    /* ── Date Picker ───────────────────────────────────────────────────── */
+    .date-strip {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+      scrollbar-width: none;
+    }
+    .date-strip::-webkit-scrollbar { display: none; }
+    .date-btn {
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 10px 16px;
+      border-radius: 10px;
+      border: 1.5px solid var(--border);
+      background: var(--surface);
+      cursor: pointer;
+      transition: var(--transition);
+      color: var(--text-muted);
+      font-family: inherit;
+      font-size: 13px;
+      min-width: 64px;
+    }
+    .date-btn .day-name { font-size: 10px; text-transform: uppercase; letter-spacing: 0.8px; }
+    .date-btn .day-num  { font-size: 20px; font-weight: 700; color: var(--text); margin: 2px 0; }
+    .date-btn .month    { font-size: 10px; }
+    .date-btn:hover { border-color: rgba(168,85,247,0.5); color: var(--text); }
+    .date-btn.active {
+      border-color: var(--purple);
+      background: rgba(124,58,237,0.15);
+      box-shadow: 0 0 16px rgba(124,58,237,0.2);
+      color: var(--text);
+    }
+    .date-btn.active .day-num { color: var(--purple-light); }
+
+    /* ── Slots Grid ────────────────────────────────────────────────────── */
+    #slots-container {
+      min-height: 160px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .slots-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      width: 100%;
+    }
+    .slot-btn {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      padding: 12px 8px;
+      border-radius: 10px;
+      border: 1.5px solid var(--border);
+      background: var(--surface);
+      cursor: pointer;
+      transition: var(--transition);
+      font-family: inherit;
+      color: var(--text);
+      overflow: hidden;
+    }
+    .slot-btn .slot-time { font-size: 15px; font-weight: 700; }
+    .slot-btn .slot-label { font-size: 10px; color: var(--text-muted); letter-spacing: 0.3px; }
+    .slot-btn:hover:not(:disabled) {
+      border-color: var(--green);
+      box-shadow: 0 0 16px var(--green-glow);
+    }
+    .slot-btn.selected {
+      border-color: var(--green);
+      background: var(--green-glow);
+      box-shadow: 0 0 20px var(--green-glow);
+    }
+    .slot-btn.selected .slot-time { color: var(--green); }
+
+    /* Held by someone else */
+    .slot-btn.held {
+      border-color: rgba(245,158,11,0.35);
+      background: var(--amber-glow);
+      cursor: not-allowed;
+      opacity: 0.75;
+    }
+    .slot-btn.held .slot-time { color: var(--amber); }
+    .slot-btn.held .slot-label { color: var(--amber); }
+
+    /* Fully booked */
+    .slot-btn.booked, .slot-btn:disabled:not(.held) {
+      border-color: rgba(255,255,255,0.04);
+      background: rgba(255,255,255,0.02);
+      cursor: not-allowed;
+      opacity: 0.4;
+    }
+    .slot-btn.booked .slot-time { text-decoration: line-through; }
+
+    /* Held by ME */
+    .slot-btn.my-hold {
+      border-color: var(--purple-light);
+      background: rgba(168,85,247,0.12);
+      box-shadow: 0 0 16px rgba(168,85,247,0.2);
+    }
+    .slot-btn.my-hold .slot-time { color: var(--purple-light); }
+
+    /* Ripple on select */
+    .slot-btn::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background: radial-gradient(circle, rgba(16,185,129,0.3) 0%, transparent 70%);
+      opacity: 0;
+      transform: scale(0);
+      transition: transform 0.4s, opacity 0.4s;
+    }
+    .slot-btn.ripple::after { transform: scale(1.5); opacity: 1; }
+
+    /* Loading skeleton */
+    .slot-skeleton {
+      height: 64px;
+      border-radius: 10px;
+      background: linear-gradient(90deg, var(--surface) 25%, rgba(255,255,255,0.07) 50%, var(--surface) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+    }
+    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+    /* ── Hold timer ────────────────────────────────────────────────────── */
+    #hold-timer-bar {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 16px;
+      border-radius: 10px;
+      background: rgba(168,85,247,0.1);
+      border: 1px solid rgba(168,85,247,0.3);
+      font-size: 13px;
+      color: var(--purple-light);
+      margin-bottom: 12px;
+    }
+    #hold-timer-bar.visible { display: flex; }
+    #hold-timer-bar .timer-icon { font-size: 16px; }
+    #hold-countdown { font-weight: 700; font-variant-numeric: tabular-nums; }
+    #release-btn {
+      margin-left: auto;
+      font-size: 11px;
+      padding: 4px 10px;
+      border-radius: 6px;
+      border: 1px solid rgba(168,85,247,0.5);
+      background: transparent;
+      color: var(--purple-light);
+      cursor: pointer;
+      font-family: inherit;
+      transition: var(--transition);
+    }
+    #release-btn:hover { background: rgba(168,85,247,0.15); }
+
+    /* ── Form ──────────────────────────────────────────────────────────── */
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .form-field { display: flex; flex-direction: column; gap: 6px; }
+    .form-field.full { grid-column: 1 / -1; }
+    .form-field label { font-size: 12px; color: var(--text-muted); font-weight: 500; }
+    .form-field input {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-family: inherit;
+      font-size: 14px;
+      color: var(--text);
+      outline: none;
+      transition: var(--transition);
+    }
+    .form-field input:focus { border-color: var(--purple); box-shadow: 0 0 0 3px rgba(124,58,237,0.15); }
+    .form-field input::placeholder { color: var(--text-muted); }
+
+    /* ── Summary box ───────────────────────────────────────────────────── */
+    #booking-summary {
+      display: none;
+      padding: 14px 16px;
+      border-radius: 10px;
+      background: rgba(201,149,106,0.06);
+      border: 1px solid rgba(201,149,106,0.2);
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+      line-height: 1.7;
+    }
+    #booking-summary.visible { display: block; }
+    #booking-summary strong { color: var(--gold-light); }
+
+    /* ── Submit button ─────────────────────────────────────────────────── */
+    #submit-btn {
+      width: 100%;
+      padding: 16px;
+      border-radius: var(--radius);
+      border: none;
+      background: linear-gradient(135deg, var(--purple), #9333ea);
+      color: #fff;
+      font-family: inherit;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: var(--transition);
+      box-shadow: 0 4px 24px rgba(124,58,237,0.35);
+      position: relative;
+      overflow: hidden;
+    }
+    #submit-btn:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 32px rgba(124,58,237,0.5);
+    }
+    #submit-btn:active:not(:disabled) { transform: translateY(0); }
+    #submit-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+    #submit-btn .btn-spinner {
+      display: none;
+      width: 18px; height: 18px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      margin: 0 auto;
+    }
+    #submit-btn.loading .btn-text { display: none; }
+    #submit-btn.loading .btn-spinner { display: block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Toast notifications ───────────────────────────────────────────── */
+    #toast-container {
+      position: fixed;
+      top: 20px; right: 16px;
+      z-index: 999;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: none;
+    }
+    .toast {
+      padding: 12px 18px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 500;
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--border);
+      animation: toastIn 0.3s cubic-bezier(0.4,0,0.2,1);
+      pointer-events: all;
+      max-width: 300px;
+    }
+    .toast.success { background: rgba(16,185,129,0.15); border-color: rgba(16,185,129,0.4); color: #6ee7b7; }
+    .toast.error   { background: rgba(239,68,68,0.15);  border-color: rgba(239,68,68,0.4);  color: #fca5a5; }
+    .toast.info    { background: rgba(124,58,237,0.15); border-color: rgba(168,85,247,0.4); color: #d8b4fe; }
+    .toast.warning { background: rgba(245,158,11,0.15); border-color: rgba(245,158,11,0.4); color: #fcd34d; }
+    @keyframes toastIn { from { opacity:0; transform: translateX(30px); } to { opacity:1; transform: translateX(0); } }
+
+    /* ── Success overlay ───────────────────────────────────────────────── */
+    #success-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(15,12,26,0.92);
+      backdrop-filter: blur(12px);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    #success-overlay.visible { display: flex; }
+    .success-card {
+      background: var(--bg2);
+      border: 1px solid rgba(201,149,106,0.3);
+      border-radius: 20px;
+      padding: 40px 28px;
+      text-align: center;
+      max-width: 380px;
+      width: 100%;
+      animation: popIn 0.4s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    @keyframes popIn { from { opacity:0; transform: scale(0.8); } to { opacity:1; transform: scale(1); } }
+    .success-icon { font-size: 56px; margin-bottom: 16px; }
+    .success-card h2 { font-size: 22px; font-weight: 700; color: var(--gold-light); margin-bottom: 8px; }
+    .success-card p  { font-size: 14px; color: var(--text-muted); line-height: 1.6; }
+    .success-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 24px; }
+    .btn-zalo {
+      display: block;
+      padding: 14px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #0068ff, #0047b3);
+      color: #fff;
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: var(--transition);
+    }
+    .btn-zalo:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(0,104,255,0.35); }
+    .btn-new {
+      padding: 12px;
+      border-radius: 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      font-family: inherit;
+      font-size: 13px;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    .btn-new:hover { color: var(--text); border-color: rgba(255,255,255,0.2); }
+
+    /* ── Live activity feed ────────────────────────────────────────────── */
+    #activity-feed {
+      position: fixed;
+      bottom: 16px; left: 50%;
+      transform: translateX(-50%);
+      z-index: 50;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+    .activity-item {
+      padding: 6px 14px;
+      border-radius: 100px;
+      font-size: 12px;
+      background: rgba(22,17,43,0.9);
+      border: 1px solid var(--border);
+      backdrop-filter: blur(8px);
+      color: var(--text-muted);
+      animation: feedIn 0.3s ease, feedOut 0.4s ease 3s forwards;
+      white-space: nowrap;
+    }
+    @keyframes feedIn  { from { opacity:0; transform: translateY(10px); } to { opacity:1; transform: translateY(0); } }
+    @keyframes feedOut { from { opacity:1; } to { opacity:0; } }
+
+    /* ── Responsive ────────────────────────────────────────────────────── */
+    @media (max-width: 400px) {
+      .services-grid { grid-template-columns: repeat(3, 1fr); }
+      .slots-grid { grid-template-columns: repeat(3, 1fr); }
+      .form-grid { grid-template-columns: 1fr; }
+      .form-field.full { grid-column: 1; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Header -->
+<header>
+  <div class="logo">🌸 Nail <span>&</span> Spa</div>
+  <p>Đặt lịch trực tuyến — khung giờ cập nhật theo thời gian thực</p>
+  <div id="connection-badge">
+    <span class="dot"></span>
+    <span id="connection-text">Đang kết nối...</span>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- Step 1: Service -->
+  <section>
+    <div class="section-label">Chọn dịch vụ</div>
+    <div class="services-grid" id="services-grid">
+      <!-- Populated by JS -->
+    </div>
+  </section>
+
+  <!-- Step 2: Date -->
+  <section>
+    <div class="section-label">Chọn ngày</div>
+    <div class="date-strip" id="date-strip"></div>
+  </section>
+
+  <!-- Step 3: Time Slot -->
+  <section>
+    <div class="section-label">Chọn khung giờ</div>
+    <!-- Hold countdown -->
+    <div id="hold-timer-bar">
+      <span class="timer-icon">⏳</span>
+      <span>Bạn đang giữ khung giờ này còn <strong id="hold-countdown">3:00</strong></span>
+      <button id="release-btn">Huỷ giữ</button>
+    </div>
+    <div id="slots-container">
+      <div style="color: var(--text-muted); font-size: 13px;">Vui lòng chọn dịch vụ và ngày trước</div>
+    </div>
+  </section>
+
+  <!-- Step 4: Customer Info -->
+  <section>
+    <div class="section-label">Thông tin của bạn</div>
+    <div class="form-grid">
+      <div class="form-field">
+        <label for="customer-name">Họ và tên *</label>
+        <input id="customer-name" type="text" placeholder="Nguyễn Thị Lan" autocomplete="name" />
+      </div>
+      <div class="form-field">
+        <label for="customer-phone">SĐT Zalo *</label>
+        <input id="customer-phone" type="tel" placeholder="0912 345 678" autocomplete="tel" />
+      </div>
+    </div>
+  </section>
+
+  <!-- Booking summary -->
+  <div id="booking-summary"></div>
+
+  <!-- Submit -->
+  <button id="submit-btn" disabled>
+    <span class="btn-text">Xác nhận đặt lịch</span>
+    <span class="btn-spinner"></span>
+  </button>
+
+</div>
+
+<!-- Toast container -->
+<div id="toast-container"></div>
+
+<!-- Activity feed -->
+<div id="activity-feed"></div>
+
+<!-- Success overlay -->
+<div id="success-overlay">
+  <div class="success-card">
+    <div class="success-icon">🎉</div>
+    <h2>Đặt lịch thành công!</h2>
+    <p id="success-detail"></p>
+    <div class="success-actions">
+      <a id="zalo-link" href="#" target="_blank" class="btn-zalo">📱 Nhắn tin xác nhận qua Zalo</a>
+      <button class="btn-new" onclick="resetBooking()">Đặt lịch mới</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Config ─────────────────────────────────────────────────────────────────
+const API = '';  // same origin
+const HOLD_TTL = 180; // seconds
+
+// ── State ───────────────────────────────────────────────────────────────────
+let state = {
+  services: [],
+  selectedServiceIds: [],
+  selectedDate: null,
+  selectedSlot: null,       // { start, end }
+  mySlotKey: null,          // key currently held by ME
+  holdTimerId: null,        // setInterval id
+  holdSecondsLeft: 0,
+  sessionId: `session_${Date.now()}_${Math.random().toString(36).slice(2,8)}`,
+  slots: [],                // current fetched slots
+  heldByOthers: new Set()  // slotKeys held by others (via socket)
+};
+
+// ── Socket.IO ───────────────────────────────────────────────────────────────
+const socket = io({ transports: ['websocket', 'polling'] });
+
+socket.on('connect', () => {
+  setBadge('connected', '🟢 Kết nối thời gian thực');
+  addActivity('Đã kết nối server thời gian thực');
+});
+socket.on('disconnect', () => {
+  setBadge('disconnected', '🔴 Mất kết nối');
+});
+
+socket.on('slot_held', ({ slotKey, by }) => {
+  if (by === state.sessionId) return; // ignore my own
+  state.heldByOthers.add(slotKey);
+  // If I was looking at that slot, deselect it
+  if (state.mySlotKey === slotKey) {
+    clearMyHold(false);
+    toast('warning', '⚠️ Khung giờ vừa bị người khác giữ!');
+  }
+  renderSlots();
+  const label = slotKey.split('_').slice(1, 3).join(' ');
+  addActivity(`Có người đang xem khung giờ ${formatTime(slotKey)}`);
+});
+
+socket.on('slot_released', ({ slotKey }) => {
+  state.heldByOthers.delete(slotKey);
+  renderSlots();
+  addActivity(`Khung giờ ${formatTime(slotKey)} vừa được thả`);
+});
+
+socket.on('booking_confirmed', ({ startTime }) => {
+  const d = new Date(startTime);
+  const label = d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' });
+  addActivity(`✅ Có lịch hẹn mới lúc ${label}`);
+  if (state.selectedDate) loadSlots(state.selectedDate); // refresh
+});
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+(async function init() {
+  await loadServices();
+  buildDateStrip();
+})();
+
+// ── Services ─────────────────────────────────────────────────────────────────
+async function loadServices() {
+  // Use hardcoded service list matching seed data (or fetch from API if endpoint added)
+  state.services = [
+    { id: 1, name: 'Làm Móng',    icon: '💅', duration: 45, price: 150000 },
+    { id: 2, name: 'Chăm Sóc Da', icon: '✨', duration: 60, price: 300000 },
+    { id: 3, name: 'Massage',     icon: '💆', duration: 30, price: 200000 }
+  ];
+  renderServices();
+}
+
+function renderServices() {
+  const grid = document.getElementById('services-grid');
+  grid.innerHTML = state.services.map(s => `
+    <div class="service-card ${state.selectedServiceIds.includes(s.id) ? 'selected' : ''}"
+         onclick="selectService(${s.id})" id="svc-${s.id}" role="button" tabindex="0"
+         onkeydown="if(event.key==='Enter')selectService(${s.id})">
+      <div class="service-icon">${s.icon}</div>
+      <div class="service-name">${s.name}</div>
+      <div class="service-meta">${s.duration} phút</div>
+      <div class="service-price">${s.price.toLocaleString('vi-VN')}đ</div>
+    </div>
+  `).join('');
+}
+
+function selectService(id) {
+  if (state.selectedServiceIds.includes(id)) {
+    state.selectedServiceIds = state.selectedServiceIds.filter(x => x !== id);
+  } else {
+    state.selectedServiceIds.push(id);
+  }
+  
+  if (state.mySlotKey) clearMyHold(true);
+  state.selectedSlot = null;
+  renderServices();
+  if (state.selectedDate) loadSlots(state.selectedDate);
+  updateSummary();
+  updateSubmitBtn();
+}
+
+// ── Date Strip ────────────────────────────────────────────────────────────────
+function buildDateStrip() {
+  const strip = document.getElementById('date-strip');
+  const days  = ['CN','T2','T3','T4','T5','T6','T7'];
+  const months = ['Th1','Th2','Th3','Th4','Th5','Th6','Th7','Th8','Th9','Th10','Th11','Th12'];
+  const today  = new Date();
+
+  // Generate next 14 days
+  const dates = Array.from({ length: 14 }, (_, i) => {
+    const d = new Date(today);
+    d.setDate(today.getDate() + i);
+    return d;
+  });
+
+  strip.innerHTML = dates.map(d => {
+    const iso = toLocalDate(d);
+    const isActive = iso === state.selectedDate;
+    return `
+      <button class="date-btn ${isActive ? 'active' : ''}" onclick="selectDate('${iso}')" id="date-${iso}">
+        <span class="day-name">${days[d.getDay()]}</span>
+        <span class="day-num">${d.getDate()}</span>
+        <span class="month">${months[d.getMonth()]}</span>
+      </button>
+    `;
+  }).join('');
+
+  // Auto-select today
+  selectDate(toLocalDate(today));
+}
+
+function selectDate(iso) {
+  if (state.selectedDate === iso) return;
+  if (state.mySlotKey) clearMyHold(true);
+  state.selectedDate = iso;
+  state.selectedSlot = null;
+  // Update active state
+  document.querySelectorAll('.date-btn').forEach(b => b.classList.remove('active'));
+  const btn = document.getElementById(`date-${iso}`);
+  if (btn) { btn.classList.add('active'); btn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' }); }
+  if (state.selectedServiceIds.length > 0) loadSlots(iso);
+  else document.getElementById('slots-container').innerHTML =
+    '<div style="color:var(--text-muted);font-size:13px;">Vui lòng chọn dịch vụ trước</div>';
+  updateSummary();
+  updateSubmitBtn();
+}
+
+// ── Slots ─────────────────────────────────────────────────────────────────────
+async function loadSlots(date) {
+  const container = document.getElementById('slots-container');
+  // Show skeleton
+  container.innerHTML = `<div class="slots-grid">${Array(12).fill('<div class="slot-skeleton"></div>').join('')}</div>`;
+
+  try {
+    const res = await fetch(`${API}/api/slots?date=${date}`);
+    const data = await res.json();
+    state.slots = data.slots || [];
+    renderSlots();
+  } catch (e) {
+    container.innerHTML = '<div style="color:var(--red);font-size:13px;">⚠️ Không tải được khung giờ</div>';
+  }
+}
+
+function renderSlots() {
+  const container = document.getElementById('slots-container');
+  if (!state.slots.length) {
+    container.innerHTML = '<div style="color:var(--text-muted);font-size:13px;">Không có khung giờ nào cho ngày này</div>';
+    return;
+  }
+
+  const html = state.slots.map(slot => {
+    const slotKey  = `${state.selectedDate}_${slot.start}`;
+    const isMyHold = slotKey === state.mySlotKey;
+    const isHeld   = state.heldByOthers.has(slotKey);
+    const isBooked = !slot.available && !isHeld;
+    const isSelected = state.selectedSlot?.start === slot.start;
+
+    let cls = 'slot-btn';
+    let label = '';
+    let disabled = false;
+
+    if (isMyHold)    { cls += ' my-hold'; label = '🔒 Đang giữ'; }
+    else if (isHeld) { cls += ' held'; label = '⏳ Đang xem'; disabled = true; }
+    else if (isBooked) { cls += ' booked'; label = 'Đã đặt'; disabled = true; }
+    else if (isSelected) { cls += ' selected'; label = '✓ Đã chọn'; }
+
+    return `
+      <button class="${cls}" ${disabled ? 'disabled' : ''}
+              onclick="selectSlot('${slot.start}','${slot.end}','${slotKey}')"
+              id="slot-${encodeURIComponent(slotKey)}" title="${slot.start}">
+        <span class="slot-time">${formatTime(slot.start)}</span>
+        <span class="slot-label">${label || '&nbsp;'}</span>
+      </button>
+    `;
+  }).join('');
+
+  container.innerHTML = `<div class="slots-grid">${html}</div>`;
+}
+
+async function selectSlot(start, end, slotKey) {
+  if (state.selectedServiceIds.length === 0) { toast('warning', 'Vui lòng chọn dịch vụ trước'); return; }
+
+  // If clicking same slot, deselect
+  if (state.mySlotKey === slotKey) { clearMyHold(true); return; }
+
+  // Release old hold first
+  if (state.mySlotKey) await releaseHold(state.mySlotKey);
+
+  // Removed: Try to hold via WebSocket (primary) - caused race conditions with REST fallback
+
+  // Optimistic update — wait for server ack via REST fallback
+  const res = await fetch(`${API}/api/slots/hold`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ slotKey, sessionId: state.sessionId })
+  });
+  const data = await res.json();
+
+  if (data.success) {
+    state.selectedSlot = { start, end };
+    state.mySlotKey = slotKey;
+    startHoldCountdown();
+    renderSlots();
+    updateSummary();
+    updateSubmitBtn();
+    toast('info', `🔒 Đã giữ chỗ ${formatTime(start)} trong 3 phút`);
+    // Ripple effect
+    const btn = document.getElementById(`slot-${encodeURIComponent(slotKey)}`);
+    if (btn) { btn.classList.add('ripple'); setTimeout(() => btn.classList.remove('ripple'), 500); }
+  } else {
+    toast('error', '⚠️ Khung giờ vừa bị người khác giữ');
+    state.heldByOthers.add(slotKey);
+    renderSlots();
+  }
+}
+
+async function releaseHold(slotKey) {
+  if (!slotKey) return;
+  // Removed: socket.emit('release_slot', { slotKey });
+  await fetch(`${API}/api/slots/hold`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ slotKey, sessionId: state.sessionId })
+  });
+}
+
+function clearMyHold(sendRelease = true) {
+  if (sendRelease && state.mySlotKey) releaseHold(state.mySlotKey);
+  state.mySlotKey = null;
+  state.selectedSlot = null;
+  stopHoldCountdown();
+  renderSlots();
+  updateSummary();
+  updateSubmitBtn();
+}
+
+// ── Hold Countdown ────────────────────────────────────────────────────────────
+function startHoldCountdown() {
+  stopHoldCountdown();
+  state.holdSecondsLeft = HOLD_TTL;
+  updateCountdownDisplay();
+  document.getElementById('hold-timer-bar').classList.add('visible');
+  state.holdTimerId = setInterval(() => {
+    state.holdSecondsLeft--;
+    if (state.holdSecondsLeft <= 0) {
+      clearMyHold(false);
+      toast('warning', '⏰ Hết thời gian giữ chỗ! Vui lòng chọn lại.');
+    } else {
+      updateCountdownDisplay();
+    }
+  }, 1000);
+}
+
+function stopHoldCountdown() {
+  if (state.holdTimerId) { clearInterval(state.holdTimerId); state.holdTimerId = null; }
+  document.getElementById('hold-timer-bar').classList.remove('visible');
+}
+
+function updateCountdownDisplay() {
+  const m = Math.floor(state.holdSecondsLeft / 60);
+  const s = state.holdSecondsLeft % 60;
+  document.getElementById('hold-countdown').textContent = `${m}:${String(s).padStart(2,'0')}`;
+}
+
+document.getElementById('release-btn').addEventListener('click', () => clearMyHold(true));
+
+// ── Summary & Submit ──────────────────────────────────────────────────────────
+function updateSummary() {
+  const box = document.getElementById('booking-summary');
+  if (state.selectedServiceIds.length === 0 || !state.selectedSlot || !state.selectedDate) {
+    box.classList.remove('visible');
+    return;
+  }
+  const svcs = state.services.filter(s => state.selectedServiceIds.includes(s.id));
+  const dateStr = new Date(state.selectedDate + 'T12:00:00+07:00')
+    .toLocaleDateString('vi-VN', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+
+  const totalPrice = svcs.reduce((sum, s) => sum + s.price, 0);
+  const svcNames = svcs.map(s => `${s.icon} ${s.name}`).join(' + ');
+
+  box.innerHTML = `
+    <strong>${svcNames}</strong><br>
+    📅 ${dateStr}<br>
+    🕐 ${formatTime(state.selectedSlot.start)}<br>
+    💰 <strong>${totalPrice.toLocaleString('vi-VN')}đ</strong>
+  `;
+  box.classList.add('visible');
+}
+
+function updateSubmitBtn() {
+  const btn = document.getElementById('submit-btn');
+  const ready = state.selectedServiceIds.length > 0 && state.selectedSlot;
+  btn.disabled = !ready;
+  if (ready) {
+    const svcs = state.services.filter(s => state.selectedServiceIds.includes(s.id));
+    const totalPrice = svcs.reduce((sum, s) => sum + s.price, 0);
+    btn.querySelector('.btn-text').textContent =
+      `Xác nhận đặt lịch — ${totalPrice.toLocaleString('vi-VN')}đ`;
+  } else {
+    btn.querySelector('.btn-text').textContent = 'Xác nhận đặt lịch';
+  }
+}
+
+// ── Form Submission ───────────────────────────────────────────────────────────
+document.getElementById('submit-btn').addEventListener('click', async () => {
+  const name  = document.getElementById('customer-name').value.trim();
+  const phone = document.getElementById('customer-phone').value.trim();
+
+  if (!name)  { toast('error', 'Vui lòng nhập họ tên'); document.getElementById('customer-name').focus(); return; }
+  if (!phone) { toast('error', 'Vui lòng nhập số điện thoại Zalo'); document.getElementById('customer-phone').focus(); return; }
+  if (!state.selectedSlot) { toast('error', 'Vui lòng chọn khung giờ'); return; }
+
+  const svcs = state.services.filter(s => state.selectedServiceIds.includes(s.id));
+  const svcNames = svcs.map(s => `${s.icon} ${s.name}`).join(', ');
+  const btn = document.getElementById('submit-btn');
+  btn.classList.add('loading');
+  btn.disabled = true;
+
+  try {
+    const res = await fetch(`${API}/api/bookings`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        customerName:  name,
+        customerPhone: phone,
+        serviceIds:    state.selectedServiceIds,
+        startTime:     state.selectedSlot.start,
+      })
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      stopHoldCountdown(); // hold fulfilled by actual booking
+      state.mySlotKey = null;
+
+      // Show success
+      const dateStr = new Date(state.selectedDate + 'T12:00:00+07:00')
+        .toLocaleDateString('vi-VN', { weekday:'long', day:'numeric', month:'long' });
+      document.getElementById('success-detail').innerHTML =
+        `<strong>${svcNames}</strong><br>📅 ${dateStr}<br>🕐 ${formatTime(state.selectedSlot.start)}<br>Cảm ơn ${name}! 💕`;
+      document.getElementById('zalo-link').href = data.zaloLink || '#';
+      document.getElementById('success-overlay').classList.add('visible');
+    } else {
+      toast('error', data.message || 'Đặt lịch thất bại');
+      btn.classList.remove('loading');
+      btn.disabled = false;
+      if (data.message?.includes('trùng') || res.status === 409) {
+        if (state.mySlotKey) { state.heldByOthers.add(state.mySlotKey); }
+        clearMyHold(false);
+        loadSlots(state.selectedDate);
+      }
+    }
+  } catch (e) {
+    toast('error', 'Lỗi kết nối. Vui lòng thử lại.');
+    btn.classList.remove('loading');
+    btn.disabled = false;
+  }
+});
+
+// ── Reset ─────────────────────────────────────────────────────────────────────
+function resetBooking() {
+  state.selectedServiceIds = [];
+  state.selectedSlot = null;
+  state.mySlotKey = null;
+  stopHoldCountdown();
+  state.heldByOthers.clear();
+  document.getElementById('success-overlay').classList.remove('visible');
+  document.getElementById('customer-name').value = '';
+  document.getElementById('customer-phone').value = '';
+  renderServices();
+  document.getElementById('booking-summary').classList.remove('visible');
+  updateSubmitBtn();
+  if (state.selectedDate) loadSlots(state.selectedDate);
+}
+
+// ── Utils ─────────────────────────────────────────────────────────────────────
+function toLocalDate(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function formatTime(isoOrSlotKey) {
+  try {
+    // If it's a slotKey like "YYYY-MM-DD_ISOString", extract the ISOString part
+    let timeStr = String(isoOrSlotKey);
+    if (timeStr.includes('_')) {
+      timeStr = timeStr.split('_')[1];
+    }
+    
+    // Extract time directly from ISO string (e.g., "2026-10-01T09:30:00+07:00" -> "09:30")
+    if (timeStr.includes('T')) {
+      return timeStr.split('T')[1].substring(0, 5);
+    }
+    
+    return timeStr;
+  } catch {
+    return isoOrSlotKey; 
+  }
+}
+
+function setBadge(cls, text) {
+  const badge = document.getElementById('connection-badge');
+  badge.className = cls;
+  document.getElementById('connection-text').textContent = text;
+}
+
+function toast(type, msg, durationMs = 3500) {
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(() => el.remove(), durationMs + 400);
+}
+
+function addActivity(msg) {
+  const feed = document.getElementById('activity-feed');
+  const el = document.createElement('div');
+  el.className = 'activity-item';
+  el.textContent = msg;
+  feed.appendChild(el);
+  setTimeout(() => el.remove(), 4000);
+}
+
+// Register Service Worker for PWA
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then(reg => console.log('SW registered:', reg.scope))
+      .catch(err => console.log('SW registration failed:', err));
+  });
+}
+</script>
+</body>
+</html>

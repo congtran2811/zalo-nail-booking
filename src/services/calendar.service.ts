@@ -6,11 +6,12 @@ export class CalendarService {
     customer_phone: string;
     start_time: Date;
     end_time: Date;
+    serviceNames?: string;
   }): Promise<string | null> {
     try {
       const event = {
         summary: `[Nail/Spa] Khách: ${booking.customer_name}`,
-        description: `SĐT Zalo khách hàng: ${booking.customer_phone}`,
+        description: `SĐT Zalo khách hàng: ${booking.customer_phone}\nDịch vụ: ${booking.serviceNames || 'N/A'}`,
         start: { dateTime: new Date(booking.start_time).toISOString() },
         end: { dateTime: new Date(booking.end_time).toISOString() }
       };

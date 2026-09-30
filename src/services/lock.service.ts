@@ -17,4 +17,10 @@ export class LockService {
       await redis.del(key);
     }
   }
+
+  static async isSlotHeld(slotKey: string): Promise<boolean> {
+    const key = `lock:hold:${slotKey}`;
+    const currentSession = await redis.get(key);
+    return currentSession !== null;
+  }
 }
