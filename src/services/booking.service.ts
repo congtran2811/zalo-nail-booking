@@ -85,4 +85,46 @@ export class BookingService {
       client.release();
     }
   }
+
+  static async getAllBookings(date?: string, status?: string) {
+    let query = `
+      SELECT b.*, 
+             string_agg(s.name, ', ') as service_name
+      FROM bookings b
+      LEFT JOIN booking_services bs ON b.id = bs.booking_id
+      LEFT JOIN services s ON bs.service_id = s.id
+      WHERE 1=1
+    `;
+    const values: any[] = [];
+    let paramIndex = 1;
+
+    if (date) {
+      query += ` AND DATE(b.start_time AT TIME ZONE 'Asia/Ho_Chi_Minh') = $${paramIndex}`;
+      values.push(date);
+      paramIndex++;
+    }
+
+    if (status) {
+      query += ` AND b.status = $${paramIndex}`;
+      values.push(status);
+      paramIndex++;
+    }
+
+    query += ` GROUP BY b.id ORDER BY b.start_time DESC`;
+
+    const result = await pool.query(query, values);
+    return result.rows;
+  }
+
+  static async updateBookingStatus(id: string, status: string) {
+    const query = `
+      UPDATE bookings
+      SET status = $1
+      WHERE id = $2
+      RETURNING *;
+    `;
+    const result = await pool.query(query, [status, id]);
+    if (result.rows.length === 0) throw new Error('Booking not found');
+    return result.rows[0];
+  }
 }

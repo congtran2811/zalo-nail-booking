@@ -8,7 +8,7 @@ const __dirname = path.dirname(__filename);
 
 async function runMigration() {
   try {
-    const sql = fs.readFileSync(path.join(__dirname, 'db/migration_01.sql'), 'utf-8');
+    const sql = fs.readFileSync(path.join(__dirname, 'db/migration_02.sql'), 'utf-8');
     await pool.query(sql);
     console.log('Migration completed successfully.');
     process.exit(0);

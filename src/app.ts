@@ -12,7 +12,7 @@ const app = express();
 app.use(express.json());
 
 // Serve static files from public directory
-app.use(express.static(path.join(__dirname, '../public')));
+app.use(express.static(path.join(__dirname, '../public'), { extensions: ['html'] }));
 
 // Endpoint: Ping to avoid Render spindown
 app.get('/ping', (_req, res) => {
