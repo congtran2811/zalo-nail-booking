@@ -3,6 +3,8 @@
   "short_name": "Spa Admin",
   "description": "Bảng điều khiển quản trị dành cho chủ tiệm",
   "start_url": "/admin/index",
+  "id": "/admin-app",
+  "scope": "/admin/",
   "display": "standalone",
   "background_color": "#f3f4f6",
   "theme_color": "#1f2937",

@@ -3,6 +3,8 @@
   "short_name": "Spa Booking",
   "description": "Ứng dụng đặt lịch làm đẹp và chăm sóc móng",
   "start_url": "/",
+  "id": "/customer-app",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#9333ea",
