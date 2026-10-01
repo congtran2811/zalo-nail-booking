@@ -1,8 +1,9 @@
-const CACHE_NAME = 'spa-booking-v3.0.2';
+const CACHE_NAME = 'spa-booking-v3.0.3';
 const urlsToCache = [
   '/',
   '/index.html',
   '/manifest.json',
+  '/admin-manifest.json',
   '/admin/login',
   '/admin/index',
   '/admin/settings'
