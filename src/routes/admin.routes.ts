@@ -1,12 +1,15 @@
 import { Router } from 'express';
 import { 
-  getBookings, updateBookingStatus,
+  login, getBookings, updateBookingStatus,
   getGoogleAuthUrl, handleGoogleCallback, getGoogleConfigs, activateGoogleConfig, deleteGoogleConfig,
   getBusinessHours, updateBusinessHours,
   getBlockedSlots, addBlockedSlot, deleteBlockedSlot
 } from '../controllers/admin.controller.js';
 
 const router = Router();
+
+// Admin Authentication
+router.post('/login', login);
 
 // Endpoints for admin bookings
 router.get('/bookings', getBookings);

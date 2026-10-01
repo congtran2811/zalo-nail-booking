@@ -2,6 +2,22 @@ import { Request, Response } from 'express';
 import { BookingService } from '../services/booking.service.js';
 import { SettingsService } from '../services/settings.service.js';
 import { google } from 'googleapis';
+import jwt from 'jsonwebtoken';
+
+export const login = (req: Request, res: Response) => {
+  const { password } = req.body;
+  
+  if (password === process.env.ADMIN_PASSWORD) {
+    const token = jwt.sign(
+      { role: 'admin' },
+      process.env.JWT_SECRET || 'secret',
+      { expiresIn: '24h' }
+    );
+    return res.status(200).json({ success: true, token });
+  }
+  
+  return res.status(401).json({ success: false, message: 'Sai mật khẩu!' });
+};
 
 export const getBookings = async (req: Request, res: Response) => {
   try {
@@ -123,7 +139,11 @@ export const getBusinessHours = async (req: Request, res: Response) => {
 
 export const updateBusinessHours = async (req: Request, res: Response) => {
   try {
-    const promises = req.body.map((bh: any) => 
+    const hours = req.body.hours;
+    if (!Array.isArray(hours)) {
+      return res.status(400).json({ success: false, message: 'Invalid payload' });
+    }
+    const promises = hours.map((bh: any) => 
       SettingsService.updateBusinessHour(bh.day_of_week, bh.open_time, bh.close_time, bh.is_closed)
     );
     await Promise.all(promises);
@@ -145,7 +165,7 @@ export const getBlockedSlots = async (req: Request, res: Response) => {
 
 export const addBlockedSlot = async (req: Request, res: Response) => {
   try {
-    const { startTime, endTime, reason } = req.body;
+    const { start_time: startTime, end_time: endTime, reason } = req.body;
     const block = await SettingsService.addBlockedSlot(startTime, endTime, reason);
     return res.status(200).json({ success: true, block });
   } catch (error) {
